@@ -21,9 +21,9 @@ class GpsLocation(private val context: Context) {
 
     fun isEnabled(): Boolean = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
-    /** Requests a fresh GPS fix, returns null if none could be obtained. Requires [hasPermission]. */
+    /** Requests a fresh GPS location, returns null if none could be obtained. Requires [hasPermission]. */
     @SuppressLint("MissingPermission")
-    suspend fun currentFix(): Location? = suspendCancellableCoroutine { cont ->
+    suspend fun currentLocation(): Location? = suspendCancellableCoroutine { cont ->
         val signal = CancellationSignal()
         cont.invokeOnCancellation { signal.cancel() }
         locationManager.getCurrentLocation(

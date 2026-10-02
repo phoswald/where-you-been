@@ -20,8 +20,8 @@
 
     let marker = null;
 
-    // Called from the app on every GPS fix; centers the map when there is no marker yet
-    function setPosition(lat, lon) {
+    // Called from the app on every GPS location; centers the map when there is no marker yet
+    function setLocation(lat, lon) {
       if (marker) {
         marker.setLatLng([lat, lon]);
       } else {
@@ -30,8 +30,8 @@
       }
     }
 
-    // Called from the app when there is no GPS fix; the next fix re-centers the map
-    function clearPosition() {
+    // Called from the app when there is no GPS location; the next location re-centers the map
+    function clearLocation() {
       if (marker) {
         marker.remove();
         marker = null;

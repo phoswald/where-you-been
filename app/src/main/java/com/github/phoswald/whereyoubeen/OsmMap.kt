@@ -25,9 +25,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 private const val BASE_URL = "https://appassets.androidplatform.net/"
 private const val TAG = "OsmMap"
 
-/** OpenStreetMap (Leaflet in a WebView) with a marker at [fix]; the marker is removed while there is none. */
+/** OpenStreetMap (Leaflet in a WebView) with a marker at [location]; the marker is removed while there is none. */
 @Composable
-fun OsmMap(fix: LocationState.Fix?, modifier: Modifier = Modifier) {
+fun OsmMap(location: LocationState.Available?, modifier: Modifier = Modifier) {
     if (LocalInspectionMode.current) {
         Box(modifier)
         return
@@ -35,14 +35,14 @@ fun OsmMap(fix: LocationState.Fix?, modifier: Modifier = Modifier) {
     val map = remember { MapPage() }
     AndroidView(
         factory = { context -> map.createWebView(context) },
-        update = { map.setFix(fix) },
+        update = { map.setLocation(location) },
         onRelease = { it.destroy() },
         modifier = modifier,
     )
 }
 
 private class MapPage {
-    private var fix: LocationState.Fix? = null
+    private var location: LocationState.Available? = null
     private var webView: WebView? = null
     private var pageLoaded = false
 
@@ -68,7 +68,7 @@ private class MapPage {
             override fun onPageFinished(view: WebView, url: String?) {
                 Log.d(TAG, "page finished, view ${view.width}x${view.height}")
                 pageLoaded = true
-                pushFix()
+                updateLocation()
             }
 
             override fun onReceivedError(
@@ -92,17 +92,16 @@ private class MapPage {
         loadDataWithBaseURL(BASE_URL, html, "text/html", "UTF-8", null)
     }
 
-    fun setFix(fix: LocationState.Fix?) {
-        this.fix = fix
-        pushFix()
+    fun setLocation(location: LocationState.Available?) {
+        this.location = location
+        updateLocation()
     }
 
-    private fun pushFix() {
-        if (!pageLoaded) return
-        val fix = fix
-        webView?.evaluateJavascript(
-            if (fix != null) "setPosition(${fix.latitude}, ${fix.longitude})" else "clearPosition()",
-            null
-        )
+    private fun updateLocation() {
+        if (pageLoaded) {
+            val location = this@MapPage.location
+            val script = if (location != null) "setLocation(${location.latitude}, ${location.longitude})" else "clearLocation()"
+            webView?.evaluateJavascript(script, null)
+        }
     }
 }

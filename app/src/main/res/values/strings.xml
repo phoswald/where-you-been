@@ -2,13 +2,14 @@
     <string name="app_name">WhereYouBeen</string>
     <!-- Client ID of "where-you-been-backend" in Google Cloud Console, corresponds to "aud" of ID token -->
     <string name="server_client_id" translatable="false">306795211937-qg6d7hah8p6ur1sauldte37f3e6rlmvb.apps.googleusercontent.com</string>
-    <string name="anonymous_name">Anonymous Coward</string>
-    <string name="greeting">Where has %1$s been?</string>
+    <string name="title">Where You Been?</string>
+    <string name="no_name">No Name</string>
+    <string name="signed_in">Signed in as %1$s (%2$s)</string>
     <string name="sign_in">Sign in with Google</string>
     <string name="sign_out">Sign out</string>
-    <string name="location_fix">Lat/Lon=%1$.6f/%2$.6f as of %3$s</string>
-    <string name="location_waiting">No GPS location (yet) as of %1$s</string>
-    <string name="location_gps_disabled">GPS is disabled</string>
     <string name="location_no_permission">Precise location permission required</string>
     <string name="location_allow">Allow location</string>
+    <string name="location_disabled">GPS is disabled</string>
+    <string name="location_waiting">No GPS location (yet) as of %1$s</string>
+    <string name="location_available">Current GPS location is %1$.6f/%2$.6f as of %3$s</string>
 </resources>

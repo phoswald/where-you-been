@@ -15,31 +15,31 @@ import kotlin.time.TimeSource
 
 sealed interface LocationState {
     data object NoPermission : LocationState
-    data object GpsDisabled : LocationState
-    data class NoFix(val time: Instant) : LocationState
-    data class Fix(val latitude: Double, val longitude: Double, val time: Instant) : LocationState
+    data object Disabled : LocationState
+    data class Waiting(val time: Instant) : LocationState
+    data class Available(val latitude: Double, val longitude: Double, val time: Instant) : LocationState
 }
 
 class LocationViewModel(application: Application) : AndroidViewModel(application) {
 
     private val gps = GpsLocation(application)
 
-    /** Polls a GPS fix every [interval], only while collected (i.e. while the UI is visible). */
+    /** Polls a GPS location every [interval], only while collected (i.e. while the UI is visible). */
     val state: StateFlow<LocationState> = flow {
         while (true) {
             val start = TimeSource.Monotonic.markNow()
             emit(
                 when {
                     !gps.hasPermission() -> LocationState.NoPermission
-                    !gps.isEnabled() -> LocationState.GpsDisabled
-                    else -> withTimeoutOrNull(interval) { gps.currentFix() }
-                        ?.let { LocationState.Fix(it.latitude, it.longitude, Instant.ofEpochMilli(it.time)) }
-                        ?: LocationState.NoFix(Instant.now())
+                    !gps.isEnabled() -> LocationState.Disabled
+                    else -> withTimeoutOrNull(interval) { gps.currentLocation() }
+                        ?.let { LocationState.Available(it.latitude, it.longitude, Instant.ofEpochMilli(it.time)) }
+                        ?: LocationState.Waiting(Instant.now())
                 }
             )
             delay(interval - start.elapsedNow())
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocationState.NoFix(Instant.now()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocationState.Waiting(Instant.now()))
 
     private companion object {
         val interval = 10.seconds

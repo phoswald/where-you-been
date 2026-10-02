@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,14 +32,13 @@ import com.github.phoswald.whereyoubeen.ui.theme.WhereYouBeenTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 private val locationPermissions = arrayOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
     Manifest.permission.ACCESS_COARSE_LOCATION,
 )
 
-private val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM)
+private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
     .withZone(ZoneId.systemDefault())
 
 class MainActivity : ComponentActivity() {
@@ -92,61 +92,62 @@ fun MainScreen(
         modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        when (state) {
-            AuthState.Loading -> CircularProgressIndicator()
-            is AuthState.SignedOut -> {
-                Greeting(name = stringResource(R.string.anonymous_name))
-                state.error?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
-                Button(onClick = onSignIn) { Text(stringResource(R.string.sign_in)) }
-            }
-            is AuthState.SignedIn -> {
-                Greeting(name = state.user.displayName ?: state.user.email)
-                Text(text = state.user.email)
-                Button(onClick = onSignOut) { Text(stringResource(R.string.sign_out)) }
-            }
-        }
+        Title()
+        UserInfo(state = state, onSignIn = onSignIn, onSignOut = onSignOut)
         LocationInfo(location = location, onRequestPermission = onRequestLocationPermission)
         OsmMap(
-            fix = location as? LocationState.Fix,
+            location = location as? LocationState.Available,
             modifier = Modifier.fillMaxWidth().weight(1f)
         )
     }
 }
 
 @Composable
-fun LocationInfo(location: LocationState, onRequestPermission: () -> Unit) {
-    when (location) {
-        is LocationState.Fix -> Text(stringResource(
-            R.string.location_fix,
-            location.latitude,
-            location.longitude,
-            timeFormatter.format(location.time)
-        ))
-        is LocationState.NoFix -> Text(stringResource(
-            R.string.location_waiting,
-            timeFormatter.format(location.time)
-        ))
-        LocationState.GpsDisabled -> Text(stringResource(R.string.location_gps_disabled))
-        LocationState.NoPermission -> {
-            Text(stringResource(R.string.location_no_permission))
-            Button(onClick = onRequestPermission) { Text(stringResource(R.string.location_allow)) }
+fun Title() {
+    Text(
+        text = stringResource(R.string.title),
+        style = MaterialTheme.typography.headlineLarge,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+fun UserInfo(state: AuthState, onSignIn: () -> Unit, onSignOut: () -> Unit) {
+    when (state) {
+        AuthState.Loading -> CircularProgressIndicator()
+        is AuthState.SignedOut -> {
+            state.error?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
+            Button(onClick = onSignIn) { Text(stringResource(R.string.sign_in)) }
+        }
+        is AuthState.SignedIn -> {
+            Text(stringResource(
+                R.string.signed_in,
+                state.user.displayName ?: stringResource(R.string.no_name),
+                state.user.email
+            ))
+            Button(onClick = onSignOut) { Text(stringResource(R.string.sign_out)) }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = stringResource(R.string.greeting, name),
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WhereYouBeenTheme {
-        Greeting("Android")
+fun LocationInfo(location: LocationState, onRequestPermission: () -> Unit) {
+    when (location) {
+        LocationState.NoPermission -> {
+            Text(stringResource(R.string.location_no_permission))
+            Button(onClick = onRequestPermission) { Text(stringResource(R.string.location_allow)) }
+        }
+        LocationState.Disabled -> Text(stringResource(R.string.location_disabled))
+        is LocationState.Waiting -> Text(stringResource(
+            R.string.location_waiting,
+            timeFormatter.format(location.time)
+        ))
+        is LocationState.Available -> Text(stringResource(
+            R.string.location_available,
+            location.latitude,
+            location.longitude,
+            timeFormatter.format(location.time)
+        ))
     }
 }
 
@@ -156,7 +157,7 @@ fun SignedInPreview() {
     WhereYouBeenTheme {
         MainScreen(
             state = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "")),
-            location = LocationState.Fix(47.376887, 8.541694, Instant.now()),
+            location = LocationState.Available(47.376887, 8.541694, Instant.now()),
             onSignIn = {},
             onSignOut = {},
             onRequestLocationPermission = {}
