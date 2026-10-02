@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -88,7 +89,7 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         when (state) {
@@ -105,6 +106,10 @@ fun MainScreen(
             }
         }
         LocationInfo(location = location, onRequestPermission = onRequestLocationPermission)
+        OsmMap(
+            fix = location as? LocationState.Fix,
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        )
     }
 }
 
