@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">WhereYouBeen</string>
+    <!-- Client ID of "where-you-been-backend" in Google Cloud Console, corresponds to "aud" of ID token -->
+    <string name="server_client_id" translatable="false">306795211937-qg6d7hah8p6ur1sauldte37f3e6rlmvb.apps.googleusercontent.com</string>
+    <string name="anonymous_name">Anonymous Coward</string>
+    <string name="greeting">Where has %1$s been?</string>
+    <string name="sign_in">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
 </resources>

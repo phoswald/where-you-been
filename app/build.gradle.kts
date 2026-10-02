@@ -21,7 +21,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile     = file(System.getenv("ANDROID_KEYSTORE_FILE"))
+            storeFile     = file(System.getenv("ANDROID_KEYSTORE_FILE") ?: "android.keystore")
             storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
             keyAlias      = "key"
             keyPassword   = System.getenv("ANDROID_KEYSTORE_PASSWORD")
@@ -54,7 +54,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.googleid)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
