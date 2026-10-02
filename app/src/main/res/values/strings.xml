@@ -6,8 +6,8 @@
     <string name="greeting">Where has %1$s been?</string>
     <string name="sign_in">Sign in with Google</string>
     <string name="sign_out">Sign out</string>
-    <string name="location_fix">Latitude: %1$.6f, Longitude: %2$.6f, acquired at %3$s</string>
-    <string name="location_waiting">Waiting for GPS fix…</string>
+    <string name="location_fix">Lat/Lon=%1$.6f/%2$.6f as of %3$s</string>
+    <string name="location_waiting">No GPS location (yet) as of %1$s</string>
     <string name="location_gps_disabled">GPS is disabled</string>
     <string name="location_no_permission">Precise location permission required</string>
     <string name="location_allow">Allow location</string>

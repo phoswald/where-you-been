@@ -38,7 +38,7 @@ private val locationPermissions = arrayOf(
     Manifest.permission.ACCESS_COARSE_LOCATION,
 )
 
-private val fixTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM)
+private val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM)
     .withZone(ZoneId.systemDefault())
 
 class MainActivity : ComponentActivity() {
@@ -116,16 +116,16 @@ fun MainScreen(
 @Composable
 fun LocationInfo(location: LocationState, onRequestPermission: () -> Unit) {
     when (location) {
-        is LocationState.Fix ->
-            Text(
-                stringResource(
-                    R.string.location_fix,
-                    location.latitude,
-                    location.longitude,
-                    fixTimeFormatter.format(location.time)
-                )
-            )
-        LocationState.NoFix -> Text(stringResource(R.string.location_waiting))
+        is LocationState.Fix -> Text(stringResource(
+            R.string.location_fix,
+            location.latitude,
+            location.longitude,
+            timeFormatter.format(location.time)
+        ))
+        is LocationState.NoFix -> Text(stringResource(
+            R.string.location_waiting,
+            timeFormatter.format(location.time)
+        ))
         LocationState.GpsDisabled -> Text(stringResource(R.string.location_gps_disabled))
         LocationState.NoPermission -> {
             Text(stringResource(R.string.location_no_permission))
