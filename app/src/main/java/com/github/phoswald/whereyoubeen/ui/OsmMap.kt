@@ -1,4 +1,4 @@
-package com.github.phoswald.whereyoubeen
+package com.github.phoswald.whereyoubeen.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
+import com.github.phoswald.whereyoubeen.domain.GeoLocation
 
 /** Android's reserved host for app-local content; an https origin makes tile requests send a Referer. */
 private const val BASE_URL = "https://appassets.androidplatform.net/"
@@ -27,7 +28,7 @@ private const val TAG = "OsmMap"
 
 /** OpenStreetMap (Leaflet in a WebView) with a marker at [location]; the marker is removed while there is none. */
 @Composable
-fun OsmMap(location: LocationState.Available?, modifier: Modifier = Modifier) {
+fun OsmMap(location: GeoLocation?, modifier: Modifier = Modifier) {
     if (LocalInspectionMode.current) {
         Box(modifier)
         return
@@ -42,7 +43,7 @@ fun OsmMap(location: LocationState.Available?, modifier: Modifier = Modifier) {
 }
 
 private class MapPage {
-    private var location: LocationState.Available? = null
+    private var location: GeoLocation? = null
     private var webView: WebView? = null
     private var pageLoaded = false
 
@@ -92,16 +93,21 @@ private class MapPage {
         loadDataWithBaseURL(BASE_URL, html, "text/html", "UTF-8", null)
     }
 
-    fun setLocation(location: LocationState.Available?) {
+    fun setLocation(location: GeoLocation?) {
         this.location = location
         updateLocation()
     }
 
     private fun updateLocation() {
-        if (pageLoaded) {
-            val location = this@MapPage.location
-            val script = if (location != null) "setLocation(${location.latitude}, ${location.longitude})" else "clearLocation()"
-            webView?.evaluateJavascript(script, null)
+        if (!pageLoaded) {
+            return
         }
+        val location = this.location
+        val script = if (location != null) {
+            "setLocation(${location.latitude}, ${location.longitude})"
+        } else {
+            "clearLocation()"
+        }
+        webView?.evaluateJavascript(script, null)
     }
 }
