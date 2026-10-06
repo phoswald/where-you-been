@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">WhereYouBeen</string>
     <!-- Client ID of "where-you-been-backend" in Google Cloud Console, corresponds to "aud" of ID token -->
-    <string name="server_client_id" translatable="false">306795211937-qg6d7hah8p6ur1sauldte37f3e6rlmvb.apps.googleusercontent.com</string>
+    <string name="server_client_id" translatable="false">306795211937-flkhdrsab9sr0jostm6c5cb1ctge5h9n.apps.googleusercontent.com</string>
     <string name="title">Where You Been?</string>
     <string name="no_name">No Name</string>
     <string name="signed_in">Signed in as %1$s (%2$s)</string>
@@ -12,4 +12,6 @@
     <string name="location_disabled">GPS is disabled</string>
     <string name="location_waiting">No GPS location (yet) as of %1$s</string>
     <string name="location_available">Current GPS location is %1$.6f/%2$.6f as of %3$s</string>
+    <string name="sync_status">Sync status: %1$d as of %2$s</string>
+    <string name="sync_none">Sync status: none</string>
 </resources>

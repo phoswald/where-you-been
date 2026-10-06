@@ -5,7 +5,7 @@
     <!-- Only GPS fixes are used, which require FINE; COARSE must be requested along with it -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Leaflet (CDN) and OpenStreetMap tiles -->
+    <!-- Leaflet (CDN), OpenStreetMap tiles and location upload -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application

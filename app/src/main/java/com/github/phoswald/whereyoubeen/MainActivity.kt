@@ -55,10 +55,14 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     val state by authViewModel.state.collectAsStateWithLifecycle()
                     val location by locationViewModel.state.collectAsStateWithLifecycle()
+                    val syncStatus by locationViewModel.syncStatus.collectAsStateWithLifecycle()
                     // The location state re-checks the permission on its next poll
                     val permissionLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestMultiplePermissions()
                     ) {}
+                    LaunchedEffect(state) {
+                        locationViewModel.idToken = (state as? AuthState.SignedIn)?.user?.idToken
+                    }
                     LaunchedEffect(Unit) {
                         if (savedInstanceState == null &&
                             checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         state = state,
                         location = location,
+                        syncStatus = syncStatus,
                         onSignIn = { authViewModel.signIn(this) },
                         onSignOut = authViewModel::signOut,
                         onRequestLocationPermission = { permissionLauncher.launch(locationPermissions) },
@@ -83,6 +88,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(
     state: AuthState,
     location: LocationState,
+    syncStatus: Int?,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onRequestLocationPermission: () -> Unit,
@@ -95,6 +101,7 @@ fun MainScreen(
         Title()
         UserInfo(state = state, onSignIn = onSignIn, onSignOut = onSignOut)
         LocationInfo(location = location, onRequestPermission = onRequestLocationPermission)
+        SyncState(status = syncStatus, location = location)
         OsmMap(
             location = location as? LocationState.Available,
             modifier = Modifier.fillMaxWidth().weight(1f)
@@ -151,6 +158,15 @@ fun LocationInfo(location: LocationState, onRequestPermission: () -> Unit) {
     }
 }
 
+@Composable
+fun SyncState(status: Int?, location: LocationState) {
+    if (status != null && location is LocationState.Available) {
+        Text(stringResource(R.string.sync_status, status, timeFormatter.format(location.time)))
+    } else {
+        Text(stringResource(R.string.sync_none))
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun SignedInPreview() {
@@ -158,6 +174,7 @@ fun SignedInPreview() {
         MainScreen(
             state = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "")),
             location = LocationState.Available(47.376887, 8.541694, Instant.now()),
+            syncStatus = 200,
             onSignIn = {},
             onSignOut = {},
             onRequestLocationPermission = {}
