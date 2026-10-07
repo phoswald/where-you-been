@@ -12,7 +12,7 @@ import java.net.URL
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-private const val UPLOAD_URL = "https://phoswald.ch/rstm/app/rest/where-you-been"
+private const val UPLOAD_URL = "https://phoswald.ch/rstm/app/rest/locations"
 private const val TIMEOUT_MILLIS = 10_000
 private const val TAG = "HttpLocationUploader"
 
