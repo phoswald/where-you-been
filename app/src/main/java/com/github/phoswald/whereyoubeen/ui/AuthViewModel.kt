@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 sealed interface AuthState {
     data object Loading : AuthState
@@ -30,6 +31,17 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
         }
         triedSilentSignIn = true
         runSignIn { authRepository.signInSilently(activity) }
+    }
+
+    /**
+     * Called whenever the activity becomes visible: renews an expired ID token in case the
+     * background renewal (which has no Activity) failed.
+     */
+    fun refreshIfExpired(activity: Activity) {
+        val user = authRepository.currentUser.value
+        if (user != null && user.expiresSoon(Instant.now())) {
+            runSignIn { authRepository.signInSilently(activity) }
+        }
     }
 
     fun signIn(activity: Activity) {

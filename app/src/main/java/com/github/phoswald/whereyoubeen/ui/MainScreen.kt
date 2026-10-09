@@ -2,14 +2,17 @@ package com.github.phoswald.whereyoubeen.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,10 +34,12 @@ private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 @Composable
 fun MainScreen(
     auth: AuthState,
+    trackingEnabled: Boolean,
     location: LocationStatus,
     sync: SyncState,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    onTrackingEnabledChange: (Boolean) -> Unit,
     onRequestLocationPermission: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -44,6 +49,7 @@ fun MainScreen(
     ) {
         Title()
         UserInfo(auth = auth, onSignIn = onSignIn, onSignOut = onSignOut)
+        TrackingSwitch(enabled = trackingEnabled, onEnabledChange = onTrackingEnabledChange)
         LocationInfo(location = location, onRequestPermission = onRequestLocationPermission)
         SyncInfo(sync = sync)
         OsmMap(
@@ -83,8 +89,23 @@ fun UserInfo(auth: AuthState, onSignIn: () -> Unit, onSignOut: () -> Unit) {
 }
 
 @Composable
+fun TrackingSwitch(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(stringResource(R.string.tracking))
+        Switch(checked = enabled, onCheckedChange = onEnabledChange)
+    }
+}
+
+@Composable
 fun LocationInfo(location: LocationStatus, onRequestPermission: () -> Unit) {
     when (location) {
+        LocationStatus.Off -> {
+            Text(stringResource(R.string.location_off))
+        }
         LocationStatus.NoPermission -> {
             Text(stringResource(R.string.location_no_permission))
             Button(onClick = onRequestPermission) { Text(stringResource(R.string.location_allow)) }
@@ -126,11 +147,13 @@ fun SyncInfo(sync: SyncState) {
 fun SignedInPreview() {
     WhereYouBeenTheme {
         MainScreen(
-            auth = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "")),
+            auth = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "", Instant.MAX)),
+            trackingEnabled = true,
             location = LocationStatus.Available(GeoLocation(47.376887, 8.541694, Instant.now())),
             sync = SyncState.Synced(Instant.now()),
             onSignIn = {},
             onSignOut = {},
+            onTrackingEnabledChange = {},
             onRequestLocationPermission = {}
         )
     }

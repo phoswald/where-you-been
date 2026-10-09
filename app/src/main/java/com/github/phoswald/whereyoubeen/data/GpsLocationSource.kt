@@ -5,63 +5,91 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
-import android.os.CancellationSignal
+import android.location.LocationRequest
 import com.github.phoswald.whereyoubeen.domain.GeoLocation
 import com.github.phoswald.whereyoubeen.domain.LocationSource
 import com.github.phoswald.whereyoubeen.domain.LocationStatus
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
-import kotlin.coroutines.resume
 import kotlin.time.Duration
-import kotlin.time.TimeSource
 
-/** Location from the GPS provider only (no network/WiFi-based locations). */
+/**
+ * Location from the GPS provider only (no network/WiFi-based locations).
+ *
+ * Subscribes to periodic updates instead of requesting single fixes: the platform then schedules
+ * and duty-cycles the GPS receiver for the interval and wakes the app only to deliver a location,
+ * which is the most battery-friendly way to get a GPS fix every [interval].
+ */
 class GpsLocationSource(private val context: Context) : LocationSource {
 
     private val locationManager = context.getSystemService(LocationManager::class.java)
 
     override fun observe(interval: Duration): Flow<LocationStatus> = flow {
         while (true) {
-            val start = TimeSource.Monotonic.markNow()
-            emit(readOnce(timeout = interval))
-            delay(interval - start.elapsedNow())
+            if (!hasPermission()) {
+                emit(LocationStatus.NoPermission)
+            } else if (!isEnabled()) {
+                emit(LocationStatus.Disabled)
+            } else {
+                emitAll(updates(interval)) // completes when GPS is switched off
+                continue
+            }
+            delay(interval) // check again later
         }
     }
 
-    private suspend fun readOnce(timeout: Duration): LocationStatus {
-        if (!hasPermission()) {
-            return LocationStatus.NoPermission
+    /** Emits [LocationStatus.Waiting] whenever no location arrived for two intervals. */
+    private fun updates(interval: Duration): Flow<LocationStatus> = channelFlow {
+        send(LocationStatus.Waiting(Instant.now()))
+        val locations = locations(interval).produceIn(this)
+        while (true) {
+            val result = withTimeoutOrNull(interval * 2) { locations.receiveCatching() }
+            when {
+                result == null -> send(LocationStatus.Waiting(Instant.now()))
+                result.isClosed -> break
+                else -> send(result.getOrThrow())
+            }
         }
-        if (!isEnabled()) {
-            return LocationStatus.Disabled
-        }
-        val location = withTimeoutOrNull(timeout) { currentLocation() }
-        if (location == null) {
-            return LocationStatus.Waiting(Instant.now())
-        }
-        return LocationStatus.Available(
-            GeoLocation(location.latitude, location.longitude, Instant.ofEpochMilli(location.time))
-        )
     }
+
+    /** Requires [hasPermission]; completes when the GPS provider is disabled. */
+    @SuppressLint("MissingPermission")
+    private fun locations(interval: Duration): Flow<LocationStatus.Available> = callbackFlow {
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                trySend(LocationStatus.Available(toGeoLocation(location)))
+            }
+
+            override fun onProviderDisabled(provider: String) {
+                close()
+            }
+        }
+        val request = LocationRequest.Builder(interval.inWholeMilliseconds)
+            .setMinUpdateIntervalMillis(interval.inWholeMilliseconds)
+            .setQuality(LocationRequest.QUALITY_BALANCED_POWER_ACCURACY)
+            .build()
+        locationManager.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER, request, context.mainExecutor, listener
+        )
+        awaitClose { locationManager.removeUpdates(listener) }
+    }
+
+    private fun toGeoLocation(location: Location) =
+        GeoLocation(location.latitude, location.longitude, Instant.ofEpochMilli(location.time))
 
     private fun hasPermission(): Boolean =
-        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED
+        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    private fun isEnabled(): Boolean = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-
-    /** Requests a fresh GPS location, returns null if none could be obtained. Requires [hasPermission]. */
-    @SuppressLint("MissingPermission")
-    private suspend fun currentLocation(): Location? = suspendCancellableCoroutine { cont ->
-        val signal = CancellationSignal()
-        cont.invokeOnCancellation { signal.cancel() }
-        locationManager.getCurrentLocation(
-            LocationManager.GPS_PROVIDER, signal, context.mainExecutor
-        ) { location -> cont.resume(location) }
-    }
+    private fun isEnabled(): Boolean =
+        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 }

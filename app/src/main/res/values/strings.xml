@@ -7,6 +7,10 @@
     <string name="signed_in">Signed in as %1$s (%2$s)</string>
     <string name="sign_in">Sign in with Google</string>
     <string name="sign_out">Sign out</string>
+    <string name="tracking">GPS tracking</string>
+    <string name="tracking_channel">Location tracking</string>
+    <string name="tracking_notification">Tracking and uploading your location</string>
+    <string name="location_off">GPS tracking is off</string>
     <string name="location_no_permission">Precise location permission required</string>
     <string name="location_allow">Allow location</string>
     <string name="location_disabled">GPS is disabled</string>

@@ -9,6 +9,7 @@ import com.github.phoswald.whereyoubeen.data.GpsLocationSource
 import com.github.phoswald.whereyoubeen.data.HttpLocationUploader
 import com.github.phoswald.whereyoubeen.domain.AuthRepository
 import com.github.phoswald.whereyoubeen.domain.LocationSource
+import com.github.phoswald.whereyoubeen.domain.LocationTracker
 import com.github.phoswald.whereyoubeen.domain.SyncLocationUseCase
 import com.github.phoswald.whereyoubeen.ui.AuthViewModel
 import com.github.phoswald.whereyoubeen.ui.LocationViewModel
@@ -19,9 +20,10 @@ class AppContainer(context: Context) {
     private val authRepository: AuthRepository = GoogleAuthRepository(context)
     private val locationSource: LocationSource = GpsLocationSource(context)
     private val syncLocation = SyncLocationUseCase(authRepository, HttpLocationUploader())
+    val locationTracker = LocationTracker(locationSource, syncLocation)
 
     val viewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer { AuthViewModel(authRepository) }
-        initializer { LocationViewModel(locationSource, syncLocation) }
+        initializer { LocationViewModel(locationTracker) }
     }
 }

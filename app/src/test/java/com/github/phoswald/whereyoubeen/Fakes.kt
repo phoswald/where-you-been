@@ -12,12 +12,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Instant
 import kotlin.time.Duration
 
-val testUser = User("Jane Doe", "jane@example.com", "token-123")
 val testLocation = GeoLocation(47.376887, 8.541694, Instant.parse("2026-10-07T12:00:00Z"))
+val testUser = User("Jane Doe", "jane@example.com", "token-123", testLocation.time.plusSeconds(3600))
+val renewedUser = testUser.copy(idToken = "token-456", expiresAt = testLocation.time.plusSeconds(7200))
 
-class FakeAuthRepository(user: User? = null) : AuthRepository {
+/** [refreshSilently] signs in as [renewed] (or fails if null) and counts the calls in [refreshes]. */
+class FakeAuthRepository(user: User? = null, var renewed: User? = renewedUser) : AuthRepository {
     override val currentUser = MutableStateFlow(user)
+    var refreshes = 0
     override suspend fun signInSilently(context: Context): User? = currentUser.value
+    override suspend fun refreshSilently(): User? {
+        refreshes++
+        renewed?.let { currentUser.value = it }
+        return renewed
+    }
     override suspend fun signInInteractive(context: Context): User? = currentUser.value
     override suspend fun signOut() {
         currentUser.value = null
@@ -30,11 +38,11 @@ class FakeLocationSource : LocationSource {
     override fun observe(interval: Duration): Flow<LocationStatus> = status
 }
 
-/** Records uploads; [respond] decides the HTTP status (or throws). */
-class FakeLocationUploader(var respond: () -> Int = { 200 }) : LocationUploader {
+/** Records uploads; [respond] decides the HTTP status for the given token (or throws). */
+class FakeLocationUploader(var respond: (idToken: String) -> Int = { 200 }) : LocationUploader {
     val uploads = mutableListOf<Pair<GeoLocation, String>>()
     override suspend fun upload(location: GeoLocation, idToken: String): Int {
         uploads += location to idToken
-        return respond()
+        return respond(idToken)
     }
 }

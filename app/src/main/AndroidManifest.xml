@@ -5,6 +5,10 @@
     <!-- Only GPS fixes are used, which require FINE; COARSE must be requested along with it -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Tracking continues in a foreground service while the app is not visible -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Leaflet (CDN), OpenStreetMap tiles and location upload -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -30,6 +34,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".service.LocationTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
     </application>
 
 </manifest>
