@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Only GPS fixes are used, which require FINE; COARSE must be requested along with it -->
+    <!-- Only GPS locations are used, which require FINE; COARSE must be requested along with it -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Tracking continues in a foreground service while the app is not visible -->

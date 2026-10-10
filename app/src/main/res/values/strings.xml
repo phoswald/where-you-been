@@ -14,9 +14,9 @@
     <string name="location_no_permission">Precise location permission required</string>
     <string name="location_allow">Allow location</string>
     <string name="location_disabled">GPS is disabled</string>
-    <string name="location_waiting">No GPS location (yet) as of %1$s</string>
-    <string name="location_available">Current GPS location is %1$.6f/%2$.6f as of %3$s</string>
-    <string name="sync_ok">Sync status: OK as of %1$s</string>
-    <string name="sync_failed">Sync status: failed (%1$s) as of %2$s</string>
-    <string name="sync_none">Sync status: none</string>
+    <string name="location_waiting">GPS location is unknown as of %1$s</string>
+    <string name="location_available">GPS location is %1$.6f/%2$.6f as of %3$s</string>
+    <string name="sync_ok">Sync OK as of %1$s</string>
+    <string name="sync_failed">Sync failed (%1$s) as of %2$s</string>
+    <string name="sync_none">Sync not yet done</string>
 </resources>

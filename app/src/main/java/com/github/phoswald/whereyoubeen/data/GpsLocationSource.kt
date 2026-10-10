@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.location.LocationRequest
+import android.util.Log
 import com.github.phoswald.whereyoubeen.domain.GeoLocation
 import com.github.phoswald.whereyoubeen.domain.LocationSource
 import com.github.phoswald.whereyoubeen.domain.LocationStatus
@@ -24,11 +25,20 @@ import java.time.Instant
 import kotlin.time.Duration
 
 /**
+ * Locations with a worse reported accuracy are dropped. The accuracy is a 68 % confidence radius,
+ * and outliers (mostly first locations after the receiver was switched off) usually report a large
+ * one.
+ */
+private const val MAX_ACCURACY_METERS = 10f
+private const val TAG = "GpsLocationSource"
+
+/**
  * Location from the GPS provider only (no network/WiFi-based locations).
  *
- * Subscribes to periodic updates instead of requesting single fixes: the platform then schedules
- * and duty-cycles the GPS receiver for the interval and wakes the app only to deliver a location,
- * which is the most battery-friendly way to get a GPS fix every [interval].
+ * Subscribes to periodic updates instead of requesting single locations: the platform then
+ * schedules and duty-cycles the GPS receiver for the interval and wakes the app only to deliver a
+ * location, which is the most battery-friendly way to get a GPS location every [interval].
+ * Locations with poor reported accuracy are dropped.
  */
 class GpsLocationSource(private val context: Context) : LocationSource {
 
@@ -67,7 +77,11 @@ class GpsLocationSource(private val context: Context) : LocationSource {
     private fun locations(interval: Duration): Flow<LocationStatus.Available> = callbackFlow {
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
-                trySend(LocationStatus.Available(toGeoLocation(location)))
+                if (location.hasAccuracy() && location.accuracy <= MAX_ACCURACY_METERS) {
+                    trySend(LocationStatus.Available(toGeoLocation(location)))
+                } else {
+                    Log.d(TAG, "dropped location, accuracy ${location.accuracy} m")
+                }
             }
 
             override fun onProviderDisabled(provider: String) {
