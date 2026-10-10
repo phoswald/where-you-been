@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.phoswald.whereyoubeen.data.GoogleAuthRepository
 import com.github.phoswald.whereyoubeen.data.GpsLocationSource
 import com.github.phoswald.whereyoubeen.data.HttpLocationUploader
+import com.github.phoswald.whereyoubeen.data.TokenExchanger
 import com.github.phoswald.whereyoubeen.domain.AuthRepository
 import com.github.phoswald.whereyoubeen.domain.LocationSource
 import com.github.phoswald.whereyoubeen.domain.LocationTracker
@@ -17,7 +18,7 @@ import com.github.phoswald.whereyoubeen.ui.LocationViewModel
 /** Manual dependency injection: creates the app-wide singletons and wires them together. */
 class AppContainer(context: Context) {
 
-    private val authRepository: AuthRepository = GoogleAuthRepository(context)
+    private val authRepository: AuthRepository = GoogleAuthRepository(context, TokenExchanger())
     private val locationSource: LocationSource = GpsLocationSource(context)
     private val syncLocation = SyncLocationUseCase(authRepository, HttpLocationUploader())
     val locationTracker = LocationTracker(locationSource, syncLocation)

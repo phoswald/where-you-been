@@ -26,7 +26,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        authViewModel.signInSilently(this)
         if (savedInstanceState == null) {
             // Every app launch starts tracking, even if the process survived from an earlier launch
             locationViewModel.setTrackingEnabled(true)
@@ -61,10 +60,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        authViewModel.refreshIfExpired(this)
     }
 }

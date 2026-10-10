@@ -21,7 +21,7 @@ class LocationTrackerTest {
     private val uploader = FakeLocationUploader()
     /** Runs coroutines eagerly, so each assertion sees the effect of the preceding line. */
     private val dispatcher = UnconfinedTestDispatcher()
-    private val tracker = LocationTracker(source, SyncLocationUseCase(auth, uploader) { testLocation.time })
+    private val tracker = LocationTracker(source, SyncLocationUseCase(auth, uploader))
 
     @Test
     fun location_offUntilRunning_thenMirrorsSource() = runTest(dispatcher) {
@@ -56,7 +56,7 @@ class LocationTrackerTest {
 
         source.status.value = LocationStatus.Available(testLocation)
         assertEquals(SyncState.Synced(testLocation.time), tracker.sync.value)
-        assertEquals(listOf(testLocation to testUser.idToken), uploader.uploads)
+        assertEquals(listOf(testLocation to testUser.accessToken), uploader.uploads)
     }
 
     @Test

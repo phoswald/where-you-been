@@ -147,7 +147,7 @@ fun SyncInfo(sync: SyncState) {
 fun SignedInPreview() {
     WhereYouBeenTheme {
         MainScreen(
-            auth = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "", Instant.MAX)),
+            auth = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "")),
             trackingEnabled = true,
             location = LocationStatus.Available(GeoLocation(47.376887, 8.541694, Instant.now())),
             sync = SyncState.Synced(Instant.now()),

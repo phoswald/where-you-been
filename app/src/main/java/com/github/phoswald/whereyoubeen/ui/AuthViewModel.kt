@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 sealed interface AuthState {
     data object Loading : AuthState
@@ -20,51 +19,27 @@ sealed interface AuthState {
 
 class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
-    private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
+    // The repository outlives the activity while tracking keeps the process alive
+    private val _state = MutableStateFlow(toState(authRepository.currentUser.value))
     val state: StateFlow<AuthState> = _state.asStateFlow()
-    private var triedSilentSignIn = false
-
-    /** Called once from the activity; no-op on configuration changes. */
-    fun signInSilently(activity: Activity) {
-        if (triedSilentSignIn) {
-            return
-        }
-        triedSilentSignIn = true
-        runSignIn { authRepository.signInSilently(activity) }
-    }
-
-    /**
-     * Called whenever the activity becomes visible: renews an expired ID token in case the
-     * background renewal (which has no Activity) failed.
-     */
-    fun refreshIfExpired(activity: Activity) {
-        val user = authRepository.currentUser.value
-        if (user != null && user.expiresSoon(Instant.now())) {
-            runSignIn { authRepository.signInSilently(activity) }
-        }
-    }
 
     fun signIn(activity: Activity) {
-        runSignIn { authRepository.signInInteractive(activity) }
+        _state.value = AuthState.Loading
+        viewModelScope.launch {
+            _state.value = try {
+                toState(authRepository.signIn(activity))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AuthState.SignedOut(error = e.message ?: e.toString())
+            }
+        }
     }
 
     fun signOut() {
         viewModelScope.launch {
             authRepository.signOut()
             _state.value = AuthState.SignedOut()
-        }
-    }
-
-    private fun runSignIn(signIn: suspend () -> User?) {
-        _state.value = AuthState.Loading
-        viewModelScope.launch {
-            _state.value = try {
-                toState(signIn())
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AuthState.SignedOut(error = e.message ?: e.toString())
-            }
         }
     }
 

@@ -21,7 +21,7 @@ private const val TAG = "HttpLocationUploader"
 private val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
 /**
- * Posts locations to the backend, authenticated with a Google ID token. Locations that fail to
+ * Posts locations to the backend, authenticated with the backend's access token. Locations that fail to
  * upload are kept in memory (lost if the process dies) and retried in order on the next upload;
  * the result is that of the last request, so it only succeeds once nothing is pending anymore.
  */
@@ -30,15 +30,13 @@ class HttpLocationUploader : LocationUploader {
     private val pending = ArrayDeque<GeoLocation>()
     private val mutex = Mutex()
 
-    override suspend fun upload(location: GeoLocation, idToken: String): Int = mutex.withLock {
+    override suspend fun upload(location: GeoLocation, accessToken: String): Int = mutex.withLock {
         withContext(Dispatchers.IO) {
-            if (location !in pending) { // already pending if re-uploaded with a renewed token
-                pending.addLast(location)
-            }
+            pending.addLast(location)
             var status = 0
             while (pending.isNotEmpty()) {
                 status = try {
-                    post(toJson(pending.first()), idToken)
+                    post(toJson(pending.first()), accessToken)
                 } catch (e: IOException) {
                     Log.w(TAG, "upload failed, ${pending.size} pending: $e")
                     throw e
@@ -61,7 +59,7 @@ class HttpLocationUploader : LocationUploader {
             .toString()
             .toByteArray()
 
-    private fun post(body: ByteArray, idToken: String): Int {
+    private fun post(body: ByteArray, accessToken: String): Int {
         val connection = URL(UPLOAD_URL).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -70,7 +68,7 @@ class HttpLocationUploader : LocationUploader {
             connection.doOutput = true
             connection.setFixedLengthStreamingMode(body.size)
             connection.setRequestProperty("Content-Type", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer $idToken")
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
             connection.outputStream.use { it.write(body) }
             return connection.responseCode
         } finally {
