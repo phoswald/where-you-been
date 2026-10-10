@@ -4,6 +4,8 @@ import android.util.Log
 import com.github.phoswald.whereyoubeen.domain.GeoLocation
 import com.github.phoswald.whereyoubeen.domain.LocationUploader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
@@ -18,19 +20,36 @@ private const val TAG = "HttpLocationUploader"
 
 private val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
-/** Posts locations to the backend, authenticated with a Google ID token. */
+/**
+ * Posts locations to the backend, authenticated with a Google ID token. Locations that fail to
+ * upload are kept in memory (lost if the process dies) and retried in order on the next upload;
+ * the result is that of the last request, so it only succeeds once nothing is pending anymore.
+ */
 class HttpLocationUploader : LocationUploader {
 
-    override suspend fun upload(location: GeoLocation, idToken: String): Int = withContext(Dispatchers.IO) {
-        try {
-            val status = post(toJson(location), idToken)
-            if (status !in 200..299) {
-                Log.w(TAG, "upload failed: HTTP $status")
+    private val pending = ArrayDeque<GeoLocation>()
+    private val mutex = Mutex()
+
+    override suspend fun upload(location: GeoLocation, idToken: String): Int = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (location !in pending) { // already pending if re-uploaded with a renewed token
+                pending.addLast(location)
+            }
+            var status = 0
+            while (pending.isNotEmpty()) {
+                status = try {
+                    post(toJson(pending.first()), idToken)
+                } catch (e: IOException) {
+                    Log.w(TAG, "upload failed, ${pending.size} pending: $e")
+                    throw e
+                }
+                if (status !in 200..299) {
+                    Log.w(TAG, "upload failed, ${pending.size} pending: HTTP $status")
+                    break
+                }
+                pending.removeFirst()
             }
             status
-        } catch (e: IOException) {
-            Log.w(TAG, "upload failed: $e")
-            throw e
         }
     }
 
