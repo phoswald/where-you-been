@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import kotlin.time.Duration
+import kotlin.time.TimeSource
 
 /**
  * Locations with a worse reported accuracy are dropped (reported as [LocationStatus.Inaccurate]).
@@ -62,38 +63,34 @@ class GpsLocationSource(private val context: Context) : LocationSource {
         }
     }
 
-    /** Emits [LocationStatus.Waiting] whenever no location arrived for two intervals. */
+    /**
+     * Emits one status per [interval], from the most accurate location of that interval, or
+     * [LocationStatus.Waiting] if no location arrived.
+     */
     private fun updates(interval: Duration): Flow<LocationStatus> = channelFlow {
         send(LocationStatus.Waiting(Instant.now()))
-        val locations = locations(interval).produceIn(this)
+        val locations = locations().produceIn(this)
         while (true) {
-            val result = withTimeoutOrNull(interval * 2) { locations.receiveCatching() }
-            when {
-                result == null -> send(LocationStatus.Waiting(Instant.now()))
-                result.isClosed -> break
-                else -> send(result.getOrThrow())
+            val deadline = TimeSource.Monotonic.markNow() + interval
+            var best: Location? = null
+            while (deadline.hasNotPassedNow()) {
+                val result = withTimeoutOrNull(-deadline.elapsedNow()) { locations.receiveCatching() } ?: break
+                if (result.isClosed) return@channelFlow
+                val location = result.getOrThrow()
+                if (location.hasAccuracy() && location.accuracy < (best?.accuracy ?: Float.MAX_VALUE)) {
+                    best = location
+                }
             }
+            send(best?.let(::toStatus) ?: LocationStatus.Waiting(Instant.now()))
         }
     }
 
     /** Requires [hasPermission]; completes when the GPS provider is disabled. */
     @SuppressLint("MissingPermission")
-    private fun locations(interval: Duration): Flow<LocationStatus> = callbackFlow {
+    private fun locations(): Flow<Location> = callbackFlow {
         val listener = object : LocationListener {
-            // Only accessed on the main executor
-            private var windowStart: Long? = null
-            private var best: Location? = null
-
             override fun onLocationChanged(location: Location) {
-                val start = windowStart ?: location.time.also { windowStart = it }
-                if (location.hasAccuracy() && location.accuracy < (best?.accuracy ?: Float.MAX_VALUE)) {
-                    best = location
-                }
-                if (location.time - start >= interval.inWholeMilliseconds) {
-                    best?.let { trySend(toStatus(it)) }
-                    windowStart = location.time
-                    best = null
-                }
+                trySend(location)
             }
 
             override fun onProviderDisabled(provider: String) {
