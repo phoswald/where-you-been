@@ -4,7 +4,6 @@
     <string name="server_client_id" translatable="false">306795211937-flkhdrsab9sr0jostm6c5cb1ctge5h9n.apps.googleusercontent.com</string>
     <string name="title">Where You Been?</string>
     <string name="no_name">No Name</string>
-    <string name="signed_in">Signed in as %1$s (%2$s)</string>
     <string name="sign_in">Sign in with Google</string>
     <string name="sign_out">Sign out</string>
     <string name="tracking">GPS tracking</string>
@@ -14,10 +13,10 @@
     <string name="location_no_permission">Precise location permission required</string>
     <string name="location_allow">Allow location</string>
     <string name="location_disabled">GPS disabled</string>
-    <string name="location_waiting">GPS location unknown as of %1$s</string>
-    <string name="location_inaccurate">GPS location inaccurate (%1$.1f m) as of %2$s</string>
-    <string name="location_available">GPS location %1$.6f/%2$.6f as of %3$s</string>
-    <string name="sync_ok">Sync OK as of %1$s</string>
-    <string name="sync_failed">Sync failed (%1$s) as of %2$s</string>
-    <string name="sync_none">Sync not yet done</string>
+    <string name="location_waiting">Waiting for location · %1$s</string>
+    <string name="location_inaccurate">Inaccurate (%1$.1f m) · %2$s</string>
+    <string name="location_available">%1$.6f, %2$.6f · %3$s</string>
+    <string name="sync_ok">Synced · %1$s</string>
+    <string name="sync_failed">Sync failed: %1$s · %2$s</string>
+    <string name="sync_none">Not synced yet</string>
 </resources>

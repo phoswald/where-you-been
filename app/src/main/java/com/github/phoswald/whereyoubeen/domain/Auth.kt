@@ -8,6 +8,8 @@ data class User(
     val email: String,
     /** Long-lived access token (JWT) issued by the backend in exchange for the Google ID token. */
     val accessToken: String,
+    /** URL of the Google profile picture, if the account has one. */
+    val pictureUrl: String? = null,
 )
 
 /** The app-wide sign-in session, shared by all ViewModels. */

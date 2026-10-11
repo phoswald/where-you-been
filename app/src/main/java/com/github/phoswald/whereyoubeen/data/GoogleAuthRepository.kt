@@ -46,6 +46,7 @@ class GoogleAuthRepository(
             displayName = google.displayName,
             email = google.id,
             accessToken = tokenExchanger.exchange(google.idToken),
+            pictureUrl = google.profilePictureUri?.toString(),
         )
         _currentUser.value = user
         return user
