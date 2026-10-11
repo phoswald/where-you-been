@@ -12,23 +12,17 @@ import android.util.Log
 import com.github.phoswald.whereyoubeen.domain.GeoLocation
 import com.github.phoswald.whereyoubeen.domain.LocationSource
 import com.github.phoswald.whereyoubeen.domain.LocationStatus
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.produceIn
-import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
-import kotlin.time.TimeSource
 
 /**
- * Locations with a worse reported accuracy are dropped (reported as [LocationStatus.Inaccurate]).
- * The accuracy is a 68 % confidence radius, and outliers (mostly first locations after the
- * receiver was switched off) usually report a large one.
+ * If the most accurate location of an interval reports a worse accuracy, it is dropped (reported
+ * as [LocationStatus.Inaccurate]). The accuracy is a 68 % confidence radius.
  */
 private const val MAX_ACCURACY_METERS = 10f
 /** Short enough to keep the GPS receiver running continuously. */
@@ -65,36 +59,15 @@ class GpsLocationSource(private val context: Context) : LocationSource {
 
     /**
      * Emits one status per [interval], from the most accurate location of that interval, or
-     * [LocationStatus.Waiting] if no location arrived.
+     * [LocationStatus.Waiting] if no location arrived. Requires [hasPermission]; completes when GPS
+     * is switched off.
      */
-    private fun updates(interval: Duration): Flow<LocationStatus> = channelFlow {
-        send(LocationStatus.Waiting(Instant.now()))
-        val locations = locations().produceIn(this)
-        while (true) {
-            val deadline = TimeSource.Monotonic.markNow() + interval
-            var best: Location? = null
-            while (deadline.hasNotPassedNow()) {
-                val result = withTimeoutOrNull(-deadline.elapsedNow()) { locations.receiveCatching() } ?: break
-                if (result.isClosed) return@channelFlow
-                val location = result.getOrThrow()
-                if (location.hasAccuracy() && location.accuracy < (best?.accuracy ?: Float.MAX_VALUE)) {
-                    best = location
-                }
-            }
-            send(best?.let(::toStatus) ?: LocationStatus.Waiting(Instant.now()))
-        }
-    }
-
-    /** Requires [hasPermission]; completes when the GPS provider is disabled. */
     @SuppressLint("MissingPermission")
-    private fun locations(): Flow<Location> = callbackFlow {
-        val listener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                trySend(location)
-            }
-
-            override fun onProviderDisabled(provider: String) {
-                close()
+    private fun updates(interval: Duration): Flow<LocationStatus> = flow {
+        val best = AtomicReference<Location?>()
+        val listener = LocationListener { location ->
+            if (location.hasAccuracy()) {
+                best.updateAndGet { old -> if (old == null || location.accuracy < old.accuracy) location else old }
             }
         }
         val request = LocationRequest.Builder(UPDATE_INTERVAL_MILLIS)
@@ -104,7 +77,16 @@ class GpsLocationSource(private val context: Context) : LocationSource {
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, request, context.mainExecutor, listener
         )
-        awaitClose { locationManager.removeUpdates(listener) }
+        try {
+            emit(LocationStatus.Waiting(Instant.now()))
+            while (true) {
+                delay(interval)
+                if (!isEnabled()) break
+                emit(best.getAndSet(null)?.let(::toStatus) ?: LocationStatus.Waiting(Instant.now()))
+            }
+        } finally {
+            locationManager.removeUpdates(listener)
+        }
     }
 
     private fun toStatus(location: Location): LocationStatus =
