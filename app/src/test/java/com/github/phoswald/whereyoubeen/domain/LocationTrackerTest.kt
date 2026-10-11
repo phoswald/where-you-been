@@ -44,12 +44,12 @@ class LocationTrackerTest {
     }
 
     @Test
-    fun sync_signedOut_queues() = runTest(dispatcher) {
+    fun sync_signedOut_failed() = runTest(dispatcher) {
         backgroundScope.launch { tracker.run() }
 
         source.status.value = LocationStatus.Available(testLocation)
 
-        assertEquals(SyncState.None, tracker.sync.value)
+        assertEquals(SyncState.Failed(testLocation.time, "not logged in"), tracker.sync.value)
         assertEquals(listOf(testLocation to null), uploader.uploads)
     }
 

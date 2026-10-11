@@ -31,15 +31,12 @@ class HttpLocationUploader : LocationUploader {
     private val pending = ArrayDeque<GeoLocation>()
     private val mutex = Mutex()
 
-    override suspend fun upload(location: GeoLocation, accessToken: String?): Int? = mutex.withLock {
+    override suspend fun upload(location: GeoLocation, accessToken: String?): Int = mutex.withLock {
         withContext(Dispatchers.IO) {
             pending.addLast(location)
-            if (accessToken == null) {
-                Log.d(TAG, "not signed in, ${pending.size} pending")
-                return@withContext null
-            }
-            var status = 0
-            while (pending.isNotEmpty()) {
+            requireNotNull(accessToken) { "Not signed in" }
+            var status: Int
+            do {
                 status = try {
                     post(toJson(pending.first()), accessToken)
                 } catch (e: IOException) {
@@ -51,7 +48,7 @@ class HttpLocationUploader : LocationUploader {
                     break
                 }
                 pending.removeFirst()
-            }
+            } while (pending.isNotEmpty())
             status
         }
     }

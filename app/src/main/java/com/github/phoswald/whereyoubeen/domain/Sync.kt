@@ -15,10 +15,10 @@ interface LocationUploader {
 
     /**
      * Queues [location] and, given an [accessToken], uploads all queued locations in order.
-     * Returns the HTTP status of the last request, or null if nothing was sent (no token);
-     * throws [java.io.IOException] if no response was received.
+     * Returns the HTTP status of the last request; throws [IllegalArgumentException] if [accessToken]
+     * is null (the location stays queued) and [java.io.IOException] if no response was received.
      */
-    suspend fun upload(location: GeoLocation, accessToken: String?): Int?
+    suspend fun upload(location: GeoLocation, accessToken: String?): Int
 }
 
 /** Uploads a location on behalf of the signed-in user. */
@@ -27,11 +27,10 @@ class SyncLocationUseCase(
     private val uploader: LocationUploader,
 ) {
 
-    /** Returns null if nobody is signed in (the location is only queued then). */
-    suspend operator fun invoke(location: GeoLocation): SyncState? {
+    suspend operator fun invoke(location: GeoLocation): SyncState {
         val accessToken = authRepository.currentUser.value?.accessToken
         return try {
-            val status = uploader.upload(location, accessToken) ?: return null
+            val status = uploader.upload(location, accessToken)
             if (status in 200..299) {
                 SyncState.Synced(location.time)
             } else {

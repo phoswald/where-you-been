@@ -56,10 +56,7 @@ class LocationTracker(
             locationSource.observe(INTERVAL).collect { _location.value = it }
         }
         _location.filterIsInstance<LocationStatus.Available>().collect {
-            val result = syncLocation(it.location)
-            if (result != null) { // null: signed out, only queued
-                _sync.value = result
-            }
+            _sync.value = syncLocation(it.location)
         }
     }
 
