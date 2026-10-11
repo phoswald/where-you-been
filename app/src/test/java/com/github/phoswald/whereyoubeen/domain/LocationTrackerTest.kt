@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,6 +23,12 @@ class LocationTrackerTest {
     /** Runs coroutines eagerly, so each assertion sees the effect of the preceding line. */
     private val dispatcher = UnconfinedTestDispatcher()
     private val tracker = LocationTracker(source, SyncLocationUseCase(auth, uploader))
+        .apply { setEnabled(true) }
+
+    @Test
+    fun enabled_offInitially() {
+        assertFalse(LocationTracker(source, SyncLocationUseCase(auth, uploader)).enabled.value)
+    }
 
     @Test
     fun location_offUntilRunning_thenMirrorsSource() = runTest(dispatcher) {
@@ -37,13 +44,13 @@ class LocationTrackerTest {
     }
 
     @Test
-    fun sync_signedOut_uploadsNothing() = runTest(dispatcher) {
+    fun sync_signedOut_queues() = runTest(dispatcher) {
         backgroundScope.launch { tracker.run() }
 
         source.status.value = LocationStatus.Available(testLocation)
 
         assertEquals(SyncState.None, tracker.sync.value)
-        assertTrue(uploader.uploads.isEmpty())
+        assertEquals(listOf(testLocation to null), uploader.uploads)
     }
 
     @Test

@@ -22,17 +22,22 @@ private val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.S
 
 /**
  * Posts locations to the backend, authenticated with the backend's access token. Locations that fail to
- * upload are kept in memory (lost if the process dies) and retried in order on the next upload;
- * the result is that of the last request, so it only succeeds once nothing is pending anymore.
+ * upload or arrive while signed out are kept in memory (lost if the process dies) and retried in order
+ * on the next upload; the result is that of the last request, so it only succeeds once nothing is
+ * pending anymore.
  */
 class HttpLocationUploader : LocationUploader {
 
     private val pending = ArrayDeque<GeoLocation>()
     private val mutex = Mutex()
 
-    override suspend fun upload(location: GeoLocation, accessToken: String): Int = mutex.withLock {
+    override suspend fun upload(location: GeoLocation, accessToken: String?): Int? = mutex.withLock {
         withContext(Dispatchers.IO) {
             pending.addLast(location)
+            if (accessToken == null) {
+                Log.d(TAG, "not signed in, ${pending.size} pending")
+                return@withContext null
+            }
             var status = 0
             while (pending.isNotEmpty()) {
                 status = try {

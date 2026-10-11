@@ -19,7 +19,7 @@ class LocationTracker(
     private val syncLocation: SyncLocationUseCase,
 ) {
 
-    private val _enabled = MutableStateFlow(true)
+    private val _enabled = MutableStateFlow(false)
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
 
     private val _location = MutableStateFlow<LocationStatus>(LocationStatus.Off)
@@ -57,7 +57,7 @@ class LocationTracker(
         }
         _location.filterIsInstance<LocationStatus.Available>().collect {
             val result = syncLocation(it.location)
-            if (result != null) { // null: signed out, nothing uploaded
+            if (result != null) { // null: signed out, only queued
                 _sync.value = result
             }
         }

@@ -13,8 +13,12 @@ sealed interface SyncState {
 /** Posts locations to the backend. */
 interface LocationUploader {
 
-    /** Returns the HTTP status code; throws [java.io.IOException] if no response was received. */
-    suspend fun upload(location: GeoLocation, accessToken: String): Int
+    /**
+     * Queues [location] and, given an [accessToken], uploads all queued locations in order.
+     * Returns the HTTP status of the last request, or null if nothing was sent (no token);
+     * throws [java.io.IOException] if no response was received.
+     */
+    suspend fun upload(location: GeoLocation, accessToken: String?): Int?
 }
 
 /** Uploads a location on behalf of the signed-in user. */
@@ -23,11 +27,11 @@ class SyncLocationUseCase(
     private val uploader: LocationUploader,
 ) {
 
-    /** Returns null if nobody is signed in (nothing is uploaded then). */
+    /** Returns null if nobody is signed in (the location is only queued then). */
     suspend operator fun invoke(location: GeoLocation): SyncState? {
-        val user = authRepository.currentUser.value ?: return null
+        val accessToken = authRepository.currentUser.value?.accessToken
         return try {
-            val status = uploader.upload(location, user.accessToken)
+            val status = uploader.upload(location, accessToken) ?: return null
             if (status in 200..299) {
                 SyncState.Synced(location.time)
             } else {

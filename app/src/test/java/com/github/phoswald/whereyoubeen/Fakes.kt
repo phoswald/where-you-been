@@ -29,11 +29,11 @@ class FakeLocationSource : LocationSource {
     override fun observe(interval: Duration): Flow<LocationStatus> = status
 }
 
-/** Records uploads; [respond] decides the HTTP status for the given token (or throws). */
+/** Records uploads; [respond] decides the HTTP status for the given token (or throws), none without. */
 class FakeLocationUploader(var respond: (accessToken: String) -> Int = { 200 }) : LocationUploader {
-    val uploads = mutableListOf<Pair<GeoLocation, String>>()
-    override suspend fun upload(location: GeoLocation, accessToken: String): Int {
+    val uploads = mutableListOf<Pair<GeoLocation, String?>>()
+    override suspend fun upload(location: GeoLocation, accessToken: String?): Int? {
         uploads += location to accessToken
-        return respond(accessToken)
+        return accessToken?.let(respond)
     }
 }

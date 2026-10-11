@@ -7,7 +7,6 @@ import com.github.phoswald.whereyoubeen.testUser
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -16,11 +15,11 @@ class SyncLocationUseCaseTest {
     private val uploader = FakeLocationUploader()
 
     @Test
-    fun signedOut_uploadsNothing() = runTest {
+    fun signedOut_queuesWithoutToken() = runTest {
         val syncLocation = SyncLocationUseCase(FakeAuthRepository(user = null), uploader)
 
         assertNull(syncLocation(testLocation))
-        assertTrue(uploader.uploads.isEmpty())
+        assertEquals(listOf(testLocation to null), uploader.uploads)
     }
 
     @Test
