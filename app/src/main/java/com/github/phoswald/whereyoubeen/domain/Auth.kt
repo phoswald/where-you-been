@@ -22,5 +22,5 @@ interface AuthRepository {
      */
     suspend fun signIn(context: Context): User?
 
-    suspend fun signOut()
+    fun signOut()
 }

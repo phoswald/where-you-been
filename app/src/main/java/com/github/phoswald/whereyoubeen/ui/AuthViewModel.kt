@@ -7,8 +7,10 @@ import com.github.phoswald.whereyoubeen.domain.AuthRepository
 import com.github.phoswald.whereyoubeen.domain.User
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface AuthState {
@@ -17,32 +19,44 @@ sealed interface AuthState {
     data class SignedIn(val user: User) : AuthState
 }
 
+/** The signed-in user comes from [AuthRepository]; only the sign-in progress and error are local. */
 class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
-    // The repository outlives the activity while tracking keeps the process alive
-    private val _state = MutableStateFlow(toState(authRepository.currentUser.value))
-    val state: StateFlow<AuthState> = _state.asStateFlow()
+    private val signingIn = MutableStateFlow(false)
+    private val error = MutableStateFlow<String?>(null)
+
+    val state: StateFlow<AuthState> =
+        combine(authRepository.currentUser, signingIn, error, ::toState)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                toState(authRepository.currentUser.value, signingIn.value, error.value)
+            )
 
     fun signIn(activity: Activity) {
-        _state.value = AuthState.Loading
+        error.value = null
+        signingIn.value = true
         viewModelScope.launch {
-            _state.value = try {
-                toState(authRepository.signIn(activity))
+            try {
+                authRepository.signIn(activity)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AuthState.SignedOut(error = e.message ?: e.toString())
+                error.value = e.message ?: e.toString()
+            } finally {
+                signingIn.value = false
             }
         }
     }
 
     fun signOut() {
-        viewModelScope.launch {
-            authRepository.signOut()
-            _state.value = AuthState.SignedOut()
-        }
+        error.value = null
+        authRepository.signOut()
     }
 
-    private fun toState(user: User?): AuthState =
-        if (user != null) AuthState.SignedIn(user) else AuthState.SignedOut()
+    private fun toState(user: User?, signingIn: Boolean, error: String?): AuthState = when {
+        signingIn -> AuthState.Loading
+        user != null -> AuthState.SignedIn(user)
+        else -> AuthState.SignedOut(error)
+    }
 }

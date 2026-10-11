@@ -1,7 +1,6 @@
 package com.github.phoswald.whereyoubeen.data
 
 import android.content.Context
-import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -52,8 +51,7 @@ class GoogleAuthRepository(
         return user
     }
 
-    override suspend fun signOut() {
-        credentialManager.clearCredentialState(ClearCredentialStateRequest())
+    override fun signOut() {
         _currentUser.value = null
     }
 }

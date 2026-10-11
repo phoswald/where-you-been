@@ -26,10 +26,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) {
-            // Every app launch starts tracking, even if the process survived from an earlier launch
-            locationViewModel.setTrackingEnabled(true)
-        }
         setContent {
             WhereYouBeenTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

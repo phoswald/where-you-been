@@ -18,7 +18,7 @@ val testUser = User("Jane Doe", "jane@example.com", "token-123")
 class FakeAuthRepository(user: User? = null) : AuthRepository {
     override val currentUser = MutableStateFlow(user)
     override suspend fun signIn(context: Context): User? = currentUser.value
-    override suspend fun signOut() {
+    override fun signOut() {
         currentUser.value = null
     }
 }
