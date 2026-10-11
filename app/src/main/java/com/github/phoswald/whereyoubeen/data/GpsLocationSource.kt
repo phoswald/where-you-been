@@ -30,14 +30,18 @@ import kotlin.time.Duration
  * receiver was switched off) usually report a large one.
  */
 private const val MAX_ACCURACY_METERS = 10f
+/** Short enough to keep the GPS receiver running continuously. */
+private const val UPDATE_INTERVAL_MILLIS = 1_000L
 private const val TAG = "GpsLocationSource"
 
 /**
  * Location from the GPS provider only (no network/WiFi-based locations).
  *
- * Subscribes to periodic updates instead of requesting single locations: the platform then
- * schedules and duty-cycles the GPS receiver for the interval and wakes the app only to deliver a
- * location, which is the most battery-friendly way to get a GPS location every [interval].
+ * Keeps the GPS receiver running with an update every second, and emits only the most accurate
+ * location of every [interval]. With longer update intervals, the platform switches the receiver
+ * off between fixes, and the first fix after restarting it is usually inaccurate (few satellites,
+ * no history), especially near buildings. A continuously running receiver keeps its satellite lock
+ * and converges to a much better accuracy, at the cost of more battery.
  * Locations with poor reported accuracy are dropped and reported as [LocationStatus.Inaccurate].
  */
 class GpsLocationSource(private val context: Context) : LocationSource {
@@ -76,12 +80,19 @@ class GpsLocationSource(private val context: Context) : LocationSource {
     @SuppressLint("MissingPermission")
     private fun locations(interval: Duration): Flow<LocationStatus> = callbackFlow {
         val listener = object : LocationListener {
+            // Only accessed on the main executor
+            private var windowStart: Long? = null
+            private var best: Location? = null
+
             override fun onLocationChanged(location: Location) {
-                if (location.hasAccuracy() && location.accuracy <= MAX_ACCURACY_METERS) {
-                    trySend(LocationStatus.Available(toGeoLocation(location)))
-                } else {
-                    Log.d(TAG, "dropped location, accuracy ${location.accuracy} m")
-                    trySend(LocationStatus.Inaccurate(Instant.ofEpochMilli(location.time), location.accuracy))
+                val start = windowStart ?: location.time.also { windowStart = it }
+                if (location.hasAccuracy() && location.accuracy < (best?.accuracy ?: Float.MAX_VALUE)) {
+                    best = location
+                }
+                if (location.time - start >= interval.inWholeMilliseconds) {
+                    best?.let { trySend(toStatus(it)) }
+                    windowStart = location.time
+                    best = null
                 }
             }
 
@@ -89,15 +100,23 @@ class GpsLocationSource(private val context: Context) : LocationSource {
                 close()
             }
         }
-        val request = LocationRequest.Builder(interval.inWholeMilliseconds)
-            .setMinUpdateIntervalMillis(interval.inWholeMilliseconds)
-            .setQuality(LocationRequest.QUALITY_BALANCED_POWER_ACCURACY)
+        val request = LocationRequest.Builder(UPDATE_INTERVAL_MILLIS)
+            .setMinUpdateIntervalMillis(UPDATE_INTERVAL_MILLIS)
+            .setQuality(LocationRequest.QUALITY_HIGH_ACCURACY)
             .build()
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, request, context.mainExecutor, listener
         )
         awaitClose { locationManager.removeUpdates(listener) }
     }
+
+    private fun toStatus(location: Location): LocationStatus =
+        if (location.accuracy <= MAX_ACCURACY_METERS) {
+            LocationStatus.Available(toGeoLocation(location))
+        } else {
+            Log.d(TAG, "dropped location, accuracy ${location.accuracy} m")
+            LocationStatus.Inaccurate(Instant.ofEpochMilli(location.time), location.accuracy)
+        }
 
     private fun toGeoLocation(location: Location) =
         GeoLocation(location.latitude, location.longitude, Instant.ofEpochMilli(location.time))
