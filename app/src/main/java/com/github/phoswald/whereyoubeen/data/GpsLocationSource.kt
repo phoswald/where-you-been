@@ -25,9 +25,9 @@ import java.time.Instant
 import kotlin.time.Duration
 
 /**
- * Locations with a worse reported accuracy are dropped. The accuracy is a 68 % confidence radius,
- * and outliers (mostly first locations after the receiver was switched off) usually report a large
- * one.
+ * Locations with a worse reported accuracy are dropped (reported as [LocationStatus.Inaccurate]).
+ * The accuracy is a 68 % confidence radius, and outliers (mostly first locations after the
+ * receiver was switched off) usually report a large one.
  */
 private const val MAX_ACCURACY_METERS = 10f
 private const val TAG = "GpsLocationSource"
@@ -38,7 +38,7 @@ private const val TAG = "GpsLocationSource"
  * Subscribes to periodic updates instead of requesting single locations: the platform then
  * schedules and duty-cycles the GPS receiver for the interval and wakes the app only to deliver a
  * location, which is the most battery-friendly way to get a GPS location every [interval].
- * Locations with poor reported accuracy are dropped.
+ * Locations with poor reported accuracy are dropped and reported as [LocationStatus.Inaccurate].
  */
 class GpsLocationSource(private val context: Context) : LocationSource {
 
@@ -74,13 +74,14 @@ class GpsLocationSource(private val context: Context) : LocationSource {
 
     /** Requires [hasPermission]; completes when the GPS provider is disabled. */
     @SuppressLint("MissingPermission")
-    private fun locations(interval: Duration): Flow<LocationStatus.Available> = callbackFlow {
+    private fun locations(interval: Duration): Flow<LocationStatus> = callbackFlow {
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 if (location.hasAccuracy() && location.accuracy <= MAX_ACCURACY_METERS) {
                     trySend(LocationStatus.Available(toGeoLocation(location)))
                 } else {
                     Log.d(TAG, "dropped location, accuracy ${location.accuracy} m")
+                    trySend(LocationStatus.Inaccurate(Instant.ofEpochMilli(location.time), location.accuracy))
                 }
             }
 

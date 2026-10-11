@@ -117,6 +117,10 @@ fun LocationInfo(location: LocationStatus, onRequestPermission: () -> Unit) {
             val time = timeFormatter.format(location.time)
             Text(stringResource(R.string.location_waiting, time))
         }
+        is LocationStatus.Inaccurate -> {
+            val time = timeFormatter.format(location.time)
+            Text(stringResource(R.string.location_inaccurate, location.accuracy, time))
+        }
         is LocationStatus.Available -> {
             val (latitude, longitude, time) = location.location
             Text(stringResource(R.string.location_available, latitude, longitude, timeFormatter.format(time)))

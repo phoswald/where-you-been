@@ -7,11 +7,11 @@ import kotlin.time.Duration
 data class GeoLocation(val latitude: Double, val longitude: Double, val time: Instant)
 
 sealed interface LocationStatus {
-    /** Tracking is switched off (or not started yet). */
     data object Off : LocationStatus
     data object NoPermission : LocationStatus
     data object Disabled : LocationStatus
     data class Waiting(val time: Instant) : LocationStatus
+    data class Inaccurate(val time: Instant, val accuracy: Float) : LocationStatus
     data class Available(val location: GeoLocation) : LocationStatus
 }
 
