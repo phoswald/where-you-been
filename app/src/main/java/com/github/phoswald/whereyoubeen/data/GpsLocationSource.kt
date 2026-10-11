@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 
 /**
- * If the most accurate location of an interval reports a worse accuracy, it is dropped (reported
+ * If the latest location of an interval reports a worse accuracy, it is dropped (reported
  * as [LocationStatus.Inaccurate]). The accuracy is a 68 % confidence radius.
  */
 private const val MAX_ACCURACY_METERS = 10f
@@ -32,7 +32,7 @@ private const val TAG = "GpsLocationSource"
 /**
  * Location from the GPS provider only (no network/WiFi-based locations).
  *
- * Keeps the GPS receiver running with an update every second, and emits only the most accurate
+ * Keeps the GPS receiver running with an update every second, and emits only the latest
  * location of every [interval]. With longer update intervals, the platform switches the receiver
  * off between fixes, and the first fix after restarting it is usually inaccurate (few satellites,
  * no history), especially near buildings. A continuously running receiver keeps its satellite lock
@@ -58,17 +58,15 @@ class GpsLocationSource(private val context: Context) : LocationSource {
     }
 
     /**
-     * Emits one status per [interval], from the most accurate location of that interval, or
+     * Emits one status per [interval], from the latest location of that interval, or
      * [LocationStatus.Waiting] if no location arrived. Requires [hasPermission]; completes when GPS
      * is switched off.
      */
     @SuppressLint("MissingPermission")
     private fun updates(interval: Duration): Flow<LocationStatus> = flow {
-        val best = AtomicReference<Location?>()
+        val latest = AtomicReference<Location?>()
         val listener = LocationListener { location ->
-            if (location.hasAccuracy()) {
-                best.updateAndGet { old -> if (old == null || location.accuracy < old.accuracy) location else old }
-            }
+            if (location.hasAccuracy()) latest.set(location)
         }
         val request = LocationRequest.Builder(UPDATE_INTERVAL_MILLIS)
             .setMinUpdateIntervalMillis(UPDATE_INTERVAL_MILLIS)
@@ -82,7 +80,7 @@ class GpsLocationSource(private val context: Context) : LocationSource {
             while (true) {
                 delay(interval)
                 if (!isEnabled()) break
-                emit(best.getAndSet(null)?.let(::toStatus) ?: LocationStatus.Waiting(Instant.now()))
+                emit(latest.getAndSet(null)?.let(::toStatus) ?: LocationStatus.Waiting(Instant.now()))
             }
         } finally {
             locationManager.removeUpdates(listener)
