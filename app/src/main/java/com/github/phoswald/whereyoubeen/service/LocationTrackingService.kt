@@ -25,17 +25,17 @@ private const val NOTIFICATION_ID = 1
 /**
  * Keeps the process alive and in the "foreground" while tracking, so GPS updates and uploads
  * continue with the screen locked or another app in front. Runs [LocationTracker.run] until tracking
- * is disabled or the app is swiped away from the recent apps.
+ * is disabled, which also happens when the app is swiped away from the recent apps.
  */
 class LocationTrackingService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var tracking: Job? = null
+    private val tracker get() = (application as WhereYouBeenApp).container.locationTracker
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
         if (tracking == null) {
-            val tracker = (application as WhereYouBeenApp).container.locationTracker
             tracking = scope.launch {
                 tracker.run()
                 stopSelf()
@@ -46,7 +46,9 @@ class LocationTrackingService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        stopSelf()
+        // Resets the toggle, so tracking does not resume when the app is reopened in the same process;
+        // run() then returns and the service stops itself
+        tracker.setEnabled(false)
     }
 
     override fun onDestroy() {
