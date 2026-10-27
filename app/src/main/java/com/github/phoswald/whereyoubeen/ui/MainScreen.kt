@@ -38,7 +38,6 @@ import com.github.phoswald.whereyoubeen.domain.GeoLocation
 import com.github.phoswald.whereyoubeen.domain.LocationStatus
 import com.github.phoswald.whereyoubeen.domain.SyncState
 import com.github.phoswald.whereyoubeen.domain.User
-import com.github.phoswald.whereyoubeen.ui.theme.WhereYouBeenTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -241,7 +240,7 @@ private fun StatusRow(
 @Preview(showBackground = true)
 @Composable
 fun SignedInPreview() {
-    WhereYouBeenTheme {
+    MaterialTheme {
         MainScreen(
             auth = AuthState.SignedIn(User("Jane Doe", "jane@example.com", "")),
             trackingEnabled = true,
@@ -258,7 +257,7 @@ fun SignedInPreview() {
 @Preview(showBackground = true)
 @Composable
 fun SignedOutPreview() {
-    WhereYouBeenTheme {
+    MaterialTheme {
         MainScreen(
             auth = AuthState.SignedOut(),
             trackingEnabled = true,
